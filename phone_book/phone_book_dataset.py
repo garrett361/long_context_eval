@@ -212,7 +212,7 @@ if __name__ == "__main__":
     }
 
     # Set up multiprocessing pool and reinitialize tokenizer in each worker.
-    with mp.Pool(processes=mp.cpu_count(),
+    with mp.Pool(processes=mp.cpu_count()//2,
                  initializer=init_worker,
                  initargs=(args.model, dataset_params)) as pool:
         dataset_list = list(tqdm(pool.imap(generate_sample, range(args.size)),
