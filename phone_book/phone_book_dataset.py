@@ -14,14 +14,14 @@ import datasets
 
 # Modified following: https://arxiv.org/abs/2406.07887 section 3.3.3
 class PhoneBookDataset(Dataset):
-    def __init__(self,  
-                 length: int = 1000, 
-                 tokenizer: AutoTokenizer = None, 
+    def __init__(self,
+                 length: int = 1000,
+                 tokenizer: AutoTokenizer = None,
                  size: int = 1000,
-                 few_shot: int = 2, 
+                 few_shot: int = 2,
                  reversed: bool = False,
                  random_depth: bool = False):
-        
+
         assert length > 500, "The length must be greater than 500 to ensure proper depth control."
 
         self.length = length
@@ -30,7 +30,7 @@ class PhoneBookDataset(Dataset):
         self.size = size
         self.reversed = reversed
         self.random_depth = random_depth
-        
+
         if not self.reversed:
             self.few_shot_template = textwrap.dedent('''\
                 What is the phone number for {name}?
@@ -47,7 +47,7 @@ class PhoneBookDataset(Dataset):
                 Remember {name}.
                 Here is the phonebook:\n
                 ''')
-    
+
             self.suffix_template = textwrap.dedent('''\
                 Okay, that is the end of the phonebook.
                 Remember when I asked you to memorize the phone number for {name}?
@@ -59,8 +59,8 @@ class PhoneBookDataset(Dataset):
         area_code = random.randint(200, 999)
         exchange = random.randint(200, 999)
         subscriber = random.randint(1000, 9999)
-        return f"{area_code}-{exchange}-{subscriber}"   
-    
+        return f"{area_code}-{exchange}-{subscriber}"
+
     # Generate phone book with controlled insertion of few-shot examples
     def _gen_phone_book(self, depth: int = 50):
         # Generate names and phone numbers for few-shot samples and target.
@@ -76,21 +76,22 @@ class PhoneBookDataset(Dataset):
                 suffix.append(self.few_shot_template.format(name=name_list[i], phone=phone_list[i]))
             suffix.append(self.few_shot_template.format(name=name_list[self.few_shot], phone=''))
             prefix = ""
-            suffix = "\n".join(suffix)
+            suffix = "\n".join(suffix).strip()
         else:
             few_shot_examples = []
             for i in range(self.few_shot):
                 few_shot_examples.append(f"{name_list[i]}: {phone_list[i]}")
             few_shot_examples = "\n".join(few_shot_examples)
             prefix = self.prefix_template.format(few_shot_examples=few_shot_examples, name=name_list[self.few_shot])
-            suffix = self.suffix_template.format(name=name_list[self.few_shot])
-        
+            suffix = self.suffix_template.format(name=name_list[self.few_shot]).strip()
+
         # The label is the target phone number (last element).
         label = phone_list[self.few_shot]
-        
+
         if self.tokenizer:
             prefix_ids = self.tokenizer(prefix, add_special_tokens=(self.tokenizer.bos_token is not None))["input_ids"]
             suffix_ids = self.tokenizer(suffix, add_special_tokens=False)["input_ids"]
+
             # Reserve space for prefix and suffix.
             phone_book_count = self.length - len(prefix_ids) - len(suffix_ids)
             input_ids = prefix_ids.copy()
@@ -101,7 +102,7 @@ class PhoneBookDataset(Dataset):
 
         # Pre-calculate positions for insertions.
         few_shot_positions = [((j + 1) * phone_book_count) // (self.few_shot + 1) for j in range(self.few_shot)]
-        few_shot_idx = 0 
+        few_shot_idx = 0
         target_position = int((depth / 100) * phone_book_count * 0.97) #
         target_inserted = False
 
@@ -140,7 +141,7 @@ class PhoneBookDataset(Dataset):
                 input_ids[len(input_ids):] = [pad_id] * pad_length
                 input_ids = torch.tensor(input_ids)
                 attention_mask = torch.cat((torch.ones(self.length - pad_length), torch.zeros(pad_length)), dim=0)
-            else: 
+            else:
                 input_ids[0:0] = [pad_id] * pad_length
                 input_ids = torch.tensor(input_ids)
                 attention_mask = torch.cat((torch.zeros(pad_length), torch.ones(self.length - pad_length)), dim=0)
@@ -160,15 +161,15 @@ class PhoneBookDataset(Dataset):
         input_raw, input_ids, attention_mask, label = self._gen_phone_book(depth)
         if self.tokenizer:
             return {
-                'input_raw': input_raw, 
-                'input_ids': input_ids, 
-                'attention_mask': attention_mask, 
+                'input_raw': input_raw,
+                'input_ids': input_ids,
+                'attention_mask': attention_mask,
                 'label': label,
                 'depth': depth
             }
         else:
             return {
-                'input_raw': input_raw, 
+                'input_raw': input_raw,
                 'label': label,
                 'depth': depth
             }
@@ -190,13 +191,13 @@ def generate_sample(idx):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', default=None, type=str, help="Tokenizer for length control.") 
-    parser.add_argument('--length', default=4096, type=int, help="Tokenized input sequence length.") 
-    parser.add_argument('--size', default=100, type=int, help="Number of samples in dataset.") 
-    parser.add_argument('--few-shot', default=2, type=int, help="Few-shot examples in prompt.") 
-    parser.add_argument('--reversed', action='store_true', help="Use reversed prompt template.") 
-    parser.add_argument('--random-depth', action='store_true', help="Use random depth for each sample.") 
-    parser.add_argument('--save-path', required=True, type=str, help="Path to save dataset.") 
+    parser.add_argument('--model', default=None, type=str, help="Tokenizer for length control.")
+    parser.add_argument('--length', default=4096, type=int, help="Tokenized input sequence length.")
+    parser.add_argument('--size', default=100, type=int, help="Number of samples in dataset.")
+    parser.add_argument('--few-shot', default=2, type=int, help="Few-shot examples in prompt.")
+    parser.add_argument('--reversed', action='store_true', help="Use reversed prompt template.")
+    parser.add_argument('--random-depth', action='store_true', help="Use random depth for each sample.")
+    parser.add_argument('--save-path', required=True, type=str, help="Path to save dataset.")
     args = parser.parse_args()
 
     torch.cuda.manual_seed(42)
@@ -216,7 +217,7 @@ if __name__ == "__main__":
                  initargs=(args.model, dataset_params)) as pool:
         dataset_list = list(tqdm(pool.imap(generate_sample, range(args.size)),
                                  total=args.size, desc="Generating dataset"))
-    
+
     avg_len = 0.0
     for i in dataset_list:
         avg_len += torch.sum(i['attention_mask'])

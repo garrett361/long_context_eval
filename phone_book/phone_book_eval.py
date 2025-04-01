@@ -79,7 +79,7 @@ def main(rank, world_size, args):
     torch.cuda.set_device(device)
 
     config_kwargs = {
-        "max_position_embeddings": 16384,
+        # "max_position_embeddings": 16384,
         # "rope_theta": 40000.0,
         "attn_implementation": "flash_attention_2"
     }
@@ -89,7 +89,7 @@ def main(rank, world_size, args):
         args.model,
         trust_remote_code=True,
         device_map=device,
-        torch_dtype=torch.float16,
+        torch_dtype=torch.bfloat16,
         config=config).to(device)
         
     mesh = init_device_mesh("cuda", (torch.distributed.get_world_size(),))
