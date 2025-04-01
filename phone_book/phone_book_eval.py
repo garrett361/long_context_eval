@@ -109,7 +109,7 @@ def main(rank, world_size, args):
     register_fsdp_forward_method(model, "generate")
     model.eval()
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path or args.model, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = 'left'
 
@@ -175,6 +175,7 @@ if __name__ == "__main__":
     parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--wandb_project',type=str, default=None)
     parser.add_argument('--wandb_id',type=str, default=None)
+    parser.add_argument('--tokenizer_path',type=str, default=None)
     args = parser.parse_args()
 
     torch.cuda.manual_seed(42)
