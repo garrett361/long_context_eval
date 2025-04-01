@@ -72,7 +72,15 @@ def phone_book_evaluation(model, tokenizer, dataloader, rank, world_size):
             100. * total_accuracy))
     return batch_registers, depth_registers
 
+
 def main(rank, world_size, args):
+    if args.wandb:
+        import wandb  # type: ignore
+
+        if rank == 0:
+            print("--> wandb is enabled!")
+            wandb.init(project=args.wandb_project, id=args.wandb_id)
+            wandb.config = vars(args)
     dist.init_process_group("nccl", rank=rank, world_size=world_size, init_method="env://")
 
     device = torch.device(torch.distributed.get_rank())
@@ -104,6 +112,9 @@ def main(rank, world_size, args):
     tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = 'left'
+
+
+
 
     for length in map(int, args.length_list.split(',')):
         print(f"Begin testing on phone books of length {length}...")
@@ -141,6 +152,9 @@ def main(rank, world_size, args):
         batch_registers, depth_registers = phone_book_evaluation(model,tokenizer,dataloader,rank,world_size)
         if rank == 0:
             print(batch_registers, depth_registers)
+            if args.wandb:
+                total_accuracy = batch_registers[0] / batch_registers[1]
+                wandb.log({"acc": total_accuracy}, step=length)
         torch.distributed.barrier()
         gc.collect()
         torch.cuda.empty_cache()
@@ -158,6 +172,9 @@ if __name__ == "__main__":
     parser.add_argument('--reversed', action='store_true', help="Use reversed prompt template.")
     parser.add_argument('--random-depth', action='store_true', help="Use random depth for each sample.")
     parser.add_argument('--save-path', type=str, help="Path to save dataset.")
+    parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--wandb_project',type=str, default=None)
+    parser.add_argument('--wandb_id',type=str, default=None)
     args = parser.parse_args()
 
     torch.cuda.manual_seed(42)
