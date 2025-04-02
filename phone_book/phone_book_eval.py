@@ -154,7 +154,17 @@ def main(rank, world_size, args):
             print(batch_registers, depth_registers)
             if args.wandb:
                 total_accuracy = batch_registers[0] / batch_registers[1]
-                wandb.log({"acc_phonebook": total_accuracy.item()}, step=length)
+                wandb.log(
+                    {
+                        "acc_phonebook": total_accuracy.item(),
+                        "length": length,
+                        "size": args.size,
+                        "batch_size": args.batch_size,
+                        "few_shot": args.few_shot,
+                        "reversed": args.reversed,
+                    },
+                    step=length,
+                )
         torch.distributed.barrier()
         gc.collect()
         torch.cuda.empty_cache()
