@@ -126,8 +126,10 @@ def main(rank, world_size, args):
                 model_name = "llama"
             elif "bamba" in (args.model.lower(),  args.model_type):
                 model_name = "bamba"
+            elif "nvidia-hybrid" in (args.model.lower(),  args.model_type):
+                model_name = "nvidia-hybrid"
             else:
-                model_name = "other"
+                raise ValueError(f"Unexpected {args.model.lower()=} and {args.model_type=} does not contain llama, bamba, or nvidia-hybrid")
             dataset_path = os.path.join(args.save_path, model_name, dataset_name)
 
             print(f"Looking for dataset in:{dataset_path}")
